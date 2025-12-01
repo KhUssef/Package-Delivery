@@ -207,7 +207,6 @@ public class DeliverySearch {
         System.out.println(this.initialState);
         System.out.println(this.trafficString);
         this.searchAlgorithm.extract(this.initialState, this.trafficString);
-
     }
 
     String path(String initialState, String traffic, String goalState) {
