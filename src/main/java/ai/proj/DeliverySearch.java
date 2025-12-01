@@ -210,7 +210,7 @@ public class DeliverySearch {
     }
 
     String path(String initialState, String traffic, String goalState) {
-        return searchAlgorithm.search(initialState, traffic, goalState);
+        return searchAlgorithm.search( goalState);
     }
 
     String plan(String initialState, String traffic, String strategy, boolean visualize) {

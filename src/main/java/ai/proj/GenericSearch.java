@@ -11,7 +11,7 @@ public abstract class GenericSearch {
     protected int[][] tunnels;
     protected int numTunnels;
 
-    public abstract String search(String initialState, String trafficString, String goalState);
+    public abstract String search(String goalState);
     
     public void extract(String initialState, String trafficString) {
         // Parse initialState: m;n;P;S;CustomerX_1,CustomerY_1,...;TunnelX_1,TunnelY_1,TunnelX_1,TunnelY_1,...;
