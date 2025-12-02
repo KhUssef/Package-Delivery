@@ -67,8 +67,6 @@ public class UniformCost extends GenericSearch {
         
         int rows = Integer.parseInt(parts[0]);
         int cols = Integer.parseInt(parts[1]);
-        int numDestinations = Integer.parseInt(parts[2]);
-        int numStores = Integer.parseInt(parts[3]);
         
         // Parse destination coordinates
         String[] destCoords = parts[4].split(",");
