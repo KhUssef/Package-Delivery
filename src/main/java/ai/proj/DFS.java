@@ -21,7 +21,7 @@ public class DFS extends GenericSearch {
     public String search(String goalState) {
 
         // goalState format = initialState + ";" + destinationIndex
-        String[] split = goalState.split(";");
+        String[] split = goalState.split(",");
         int goalIndex = Integer.parseInt(split[split.length - 1]);
 
         int goalX = this.destinations[goalIndex][0];
