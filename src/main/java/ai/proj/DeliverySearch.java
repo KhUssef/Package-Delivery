@@ -202,12 +202,19 @@ public class DeliverySearch {
     }
 
     void test() {
-        this.searchAlgorithm = new AStar();
-        this.searchAlgorithm = new DFS();
+        
+        this.searchAlgorithm = new BFS();
         this.GenGrid();
         System.out.println(this.initialState);
         System.out.println(this.trafficString);
         this.searchAlgorithm.extract(this.initialState, this.trafficString);
+       System.out.println(this.searchAlgorithm.search(this.destinations[0][0] + "," + this.destinations[0][1]));
+    this.searchAlgorithm = new IterativeDeepening();
+    this.searchAlgorithm.extract(this.initialState, this.trafficString);
+    System.out.println(this.searchAlgorithm.search(this.destinations[0][0] + "," + this.destinations[0][1]));
+
+
+       
     }
 
     String path(String initialState, String traffic, String goalState) {
