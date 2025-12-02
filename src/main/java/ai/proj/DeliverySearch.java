@@ -208,7 +208,6 @@ public class DeliverySearch {
         System.out.println(this.initialState);
         System.out.println(this.trafficString);
         this.searchAlgorithm.extract(this.initialState, this.trafficString);
-        System.out.println("DFS: " + this.searchAlgorithm.search(this.initialState + ";" + 0));
     }
 
     String path(String initialState, String traffic, String goalState) {
