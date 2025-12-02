@@ -4,229 +4,180 @@ import java.util.*;
 
 public class UniformCost extends GenericSearch {
     
-    // Inner class to represent a state in the search
-    private static class State {
-        int row;
-        int col;
+    private static class Node {
+        int row, col, cost;
+        Node parent;
+        String action; // Track the action taken to reach this node
         
-        State(int row, int col) {
+        Node(int row, int col, int cost, Node parent, String action) {
             this.row = row;
             this.col = col;
+            this.cost = cost;
+            this.parent = parent;
+            this.action = action;
         }
         
         @Override
         public boolean equals(Object o) {
             if (this == o) return true;
-            if (!(o instanceof State)) return false;
-            State state = (State) o;
-            return row == state.row && col == state.col;
+            if (!(o instanceof Node)) return false;
+            Node node = (Node) o;
+            return row == node.row && col == node.col;
         }
         
         @Override
         public int hashCode() {
             return Objects.hash(row, col);
         }
-        
-        @Override
-        public String toString() {
-            return "(" + row + "," + col + ")";
-        }
-    }
-    
-    // Priority queue entry that holds state and its accumulated cost
-    private static class PQEntry implements Comparable<PQEntry> {
-        State state;
-        int cost;  // Accumulated cost to reach this state
-        
-        PQEntry(State state, int cost) {
-            this.state = state;
-            this.cost = cost;
-        }
-        
-        @Override
-        public int compareTo(PQEntry other) {
-            return Integer.compare(this.cost, other.cost);
-        }
-    }
-    
-    // Result class to hold both cost and path
-    private static class SearchResult {
-        int cost;
-        List<State> path;
-        
-        SearchResult(int cost, List<State> path) {
-            this.cost = cost;
-            this.path = path;
-        }
     }
     
     @Override
     public String search(String goalState) {
-        // Parse the goal state to extract grid dimensions, stores, destinations, and traffic
-        String[] parts = goalState.split(";");
+        // goalState format: "goalRow,goalCol" 
+        String[] goalParts = goalState.split("[,;]");
+        int goalRow = Integer.parseInt(goalParts[0]);
+        int goalCol = Integer.parseInt(goalParts[1]);
         
-        int rows = Integer.parseInt(parts[0]);
-        int cols = Integer.parseInt(parts[1]);
-        
-        // Parse destination coordinates
-        String[] destCoords = parts[4].split(",");
-        List<State> destinations = new ArrayList<>();
-        for (int i = 0; i < destCoords.length - 1; i += 2) {
-            int r = Integer.parseInt(destCoords[i]);
-            int c = Integer.parseInt(destCoords[i + 1]);
-            destinations.add(new State(r, c));
-        }
-        
-        // Parse store coordinates
-        String[] storeCoords = parts[5].split(",");
-        List<State> stores = new ArrayList<>();
-        for (int i = 0; i < storeCoords.length - 1; i += 2) {
-            int r = Integer.parseInt(storeCoords[i]);
-            int c = Integer.parseInt(storeCoords[i + 1]);
-            stores.add(new State(r, c));
-        }
-        
-        // Parse traffic data - store edge costs (bidirectional)
-        Map<String, Integer> trafficMap = new HashMap<>();
-        for (int i = 7; i < parts.length; i++) {
-            String part = parts[i].trim();
-            if (part.isEmpty()) continue;
-            String[] traffic = part.split(",");
-            if (traffic.length >= 5) {
-                int r1 = Integer.parseInt(traffic[0].trim());
-                int c1 = Integer.parseInt(traffic[1].trim());
-                int r2 = Integer.parseInt(traffic[2].trim());
-                int c2 = Integer.parseInt(traffic[3].trim());
-                int cost = Integer.parseInt(traffic[4].trim());
-                
-                // Add edge in both directions (bidirectional graph)
-                String key1 = r1 + "," + c1 + "->" + r2 + "," + c2;
-                String key2 = r2 + "," + c2 + "->" + r1 + "," + c1;
-                trafficMap.put(key1, cost);
-                trafficMap.put(key2, cost);
-            }
-        }
-        
-        // Use the first destination as the goal
-        State goal = destinations.get(0);
-        
-        System.out.println("Destinations: " + destinations);
-        System.out.println("Stores: " + stores);
-        System.out.println("Total edges in traffic map: " + trafficMap.size());
-        
-        // Find the store with minimum cost to reach the goal
-        State bestStore = null;
+        // Find the store with minimum path cost to the goal
+        Node bestSolution = null;
         int minCost = Integer.MAX_VALUE;
-        List<State> bestPath = null;
+        int bestStoreIndex = -1;
         
-        for (State store : stores) {
-            SearchResult result = uniformCostSearch(store, goal, rows, cols, trafficMap);
-            System.out.println("Store at " + store + " -> Goal at " + goal + " : Cost = " + 
-                             (result.cost == Integer.MAX_VALUE ? "UNREACHABLE" : result.cost));
-            
-            if (result.cost < minCost) {
+        for (int i = 0; i < numStores; i++) {
+            Node result = uniformCostSearch(stores[i][0], stores[i][1], goalRow, goalCol);
+            if (result != null && result.cost < minCost) {
                 minCost = result.cost;
-                bestStore = store;
-                bestPath = result.path;
+                bestSolution = result;
+                bestStoreIndex = i;
             }
         }
         
-        if (bestStore != null && bestPath != null) {
-            StringBuilder sb = new StringBuilder();
-            sb.append("Best store: (").append(bestStore.row).append(",").append(bestStore.col)
-              .append(") with cost: ").append(minCost).append("\n");
-            sb.append("Path: ");
-            for (int i = 0; i < bestPath.size(); i++) {
-                sb.append(bestPath.get(i));
-                if (i < bestPath.size() - 1) {
-                    sb.append(" -> ");
-                }
-            }
-            return sb.toString();
+        if (bestSolution == null) {
+            return "FAIL";
         }
         
-        return "No reachable store found";
+        // Reconstruct path with actions
+        List<String> actions = new ArrayList<>();
+        List<String> pathCoords = new ArrayList<>();
+        Node current = bestSolution;
+        
+        while (current != null) {
+            pathCoords.add(0, current.row + "," + current.col);
+            if (current.action != null) {
+                actions.add(0, current.action);
+            }
+            current = current.parent;
+        }
+        
+        // Format: path coordinates separated by semicolons
+        return String.join(";", pathCoords);
     }
     
-    // UCS algorithm to find minimum cost from start to goal and track the path
-    private SearchResult uniformCostSearch(State start, State goal, int rows, int cols, 
-                                          Map<String, Integer> trafficMap) {
+    private Node uniformCostSearch(int startRow, int startCol, int goalRow, int goalCol) {
+        PriorityQueue<Node> frontier = new PriorityQueue<>(Comparator.comparingInt(n -> n.cost));
+        Set<String> visited = new HashSet<>();
         
-        PriorityQueue<PQEntry> frontier = new PriorityQueue<>();
-        Map<State, Integer> costSoFar = new HashMap<>();
-        Map<State, State> cameFrom = new HashMap<>();  // To reconstruct the path
-        
-        frontier.add(new PQEntry(start, 0));
-        costSoFar.put(start, 0);
-        cameFrom.put(start, null);  // Start has no parent
+        Node startNode = new Node(startRow, startCol, 0, null, null);
+        frontier.add(startNode);
         
         while (!frontier.isEmpty()) {
-            PQEntry current = frontier.poll();
+            Node current = frontier.poll();
             
-            // Goal test
-            if (current.state.equals(goal)) {
-                // Reconstruct path
-                List<State> path = reconstructPath(cameFrom, start, goal);
-                return new SearchResult(current.cost, path);
-            }
-            
-            // Skip if we've found a better path to this state already
-            if (current.cost > costSoFar.getOrDefault(current.state, Integer.MAX_VALUE)) {
+            // Check if already visited
+            String currentKey = current.row + "," + current.col;
+            if (visited.contains(currentKey)) {
                 continue;
             }
             
-            // Expand neighbors (up, down, left, right)
-            int[][] directions = {{-1, 0}, {1, 0}, {0, -1}, {0, 1}};
+            // Mark as visited AFTER polling (guarantees optimal path in UCS)
+            visited.add(currentKey);
             
-            for (int[] dir : directions) {
-                int newRow = current.state.row + dir[0];
-                int newCol = current.state.col + dir[1];
-                
-                // Check bounds
-                if (newRow < 0 || newRow >= rows || newCol < 0 || newCol >= cols) {
-                    continue;
+            // Goal check
+            if (current.row == goalRow && current.col == goalCol) {
+                return current;
+            }
+            
+            // Expand neighbors
+            expandNode(current, frontier, visited);
+        }
+        
+        return null; // No path found
+    }
+    
+    private void expandNode(Node current, PriorityQueue<Node> frontier, Set<String> visited) {
+        // Direction vectors: right, down, left, up
+        int[][] directions = {{0, 1}, {1, 0}, {0, -1}, {-1, 0}};
+        String[] dirNames = {"right", "down", "left", "up"};
+        
+        // Check regular moves in all 4 directions
+        for (int d = 0; d < 4; d++) {
+            int[] dir = directions[d];
+            int newRow = current.row + dir[0];
+            int newCol = current.col + dir[1];
+            
+            // Check bounds
+            if (newRow < 0 || newRow >= rows || newCol < 0 || newCol >= cols) {
+                continue;
+            }
+            
+            String newKey = newRow + "," + newCol;
+            if (visited.contains(newKey)) {
+                continue;
+            }
+            
+            // Determine traffic cost based on direction
+            int cost = 0;
+            if (dir[0] == 0 && dir[1] == 1) { 
+                // Moving right: use traffic[current][0]
+                cost = traffic[current.row][current.col][0];
+            } else if (dir[0] == 1 && dir[1] == 0) { 
+                // Moving down: use traffic[current][1]
+                cost = traffic[current.row][current.col][1];
+            } else if (dir[0] == 0 && dir[1] == -1) { 
+                // Moving left: reverse of right from newCell
+                cost = traffic[newRow][newCol][0];
+            } else { 
+                // Moving up: reverse of down from newCell
+                cost = traffic[newRow][newCol][1];
+            }
+            
+            // Skip if blocked (0 means blocked road per project spec)
+            if (cost == 0 || cost == Integer.MAX_VALUE) {
+                continue;
+            }
+            
+            int newCost = current.cost + cost;
+            frontier.add(new Node(newRow, newCol, newCost, current, dirNames[d]));
+        }
+        
+        // Check for tunnel teleportation
+        for (int i = 0; i < numTunnels; i++) {
+            int entrance1Row = tunnels[i * 2][0];
+            int entrance1Col = tunnels[i * 2][1];
+            int entrance2Row = tunnels[i * 2 + 1][0];
+            int entrance2Col = tunnels[i * 2 + 1][1];
+            
+            // Calculate Manhattan distance for tunnel cost
+            int manhattanDist = Math.abs(entrance1Row - entrance2Row) + 
+                               Math.abs(entrance1Col - entrance2Col);
+            
+            // If at entrance 1, can teleport to entrance 2
+            if (current.row == entrance1Row && current.col == entrance1Col) {
+                String newKey = entrance2Row + "," + entrance2Col;
+                if (!visited.contains(newKey)) {
+                    int newCost = current.cost + manhattanDist;
+                    frontier.add(new Node(entrance2Row, entrance2Col, newCost, current, "tunnel"));
                 }
-                
-                // Get edge cost from traffic map
-                String edgeKey = current.state.row + "," + current.state.col + "->" + 
-                               newRow + "," + newCol;
-                
-                if (!trafficMap.containsKey(edgeKey)) {
-                    continue; // No edge exists (obstacle)
-                }
-                
-                int edgeCost = trafficMap.get(edgeKey);
-                
-                // Skip if edge is blocked (infinite cost)
-                if (edgeCost == Integer.MAX_VALUE) {
-                    continue;
-                }
-                
-                State nextState = new State(newRow, newCol);
-                int newCost = current.cost + edgeCost;
-                
-                // Only add to frontier if this path is better
-                if (newCost < costSoFar.getOrDefault(nextState, Integer.MAX_VALUE)) {
-                    costSoFar.put(nextState, newCost);
-                    cameFrom.put(nextState, current.state);  // Track parent
-                    frontier.add(new PQEntry(nextState, newCost));
+            }
+            
+            // If at entrance 2, can teleport to entrance 1
+            if (current.row == entrance2Row && current.col == entrance2Col) {
+                String newKey = entrance1Row + "," + entrance1Col;
+                if (!visited.contains(newKey)) {
+                    int newCost = current.cost + manhattanDist;
+                    frontier.add(new Node(entrance1Row, entrance1Col, newCost, current, "tunnel"));
                 }
             }
         }
-        
-        return new SearchResult(Integer.MAX_VALUE, new ArrayList<>()); // Goal not reachable
-    }
-    
-    // Reconstruct the path from start to goal using the cameFrom map
-    private List<State> reconstructPath(Map<State, State> cameFrom, State start, State goal) {
-        List<State> path = new ArrayList<>();
-        State current = goal;
-        
-        while (current != null) {
-            path.add(0, current);  // Add to front of list
-            current = cameFrom.get(current);
-        }
-        
-        return path;
     }
 }
