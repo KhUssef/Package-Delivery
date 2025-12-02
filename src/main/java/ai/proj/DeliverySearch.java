@@ -203,10 +203,12 @@ public class DeliverySearch {
 
     void test() {
         this.searchAlgorithm = new AStar();
+        this.searchAlgorithm = new DFS();
         this.GenGrid();
         System.out.println(this.initialState);
         System.out.println(this.trafficString);
         this.searchAlgorithm.extract(this.initialState, this.trafficString);
+        System.out.println("DFS: " + this.searchAlgorithm.search(this.initialState + ";" + 0));
     }
 
     String path(String initialState, String traffic, String goalState) {
