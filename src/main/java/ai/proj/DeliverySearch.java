@@ -203,6 +203,7 @@ public class DeliverySearch {
 
     void test() {
         this.searchAlgorithm = new AStar();
+        this.searchAlgorithm = new DFS();
         this.GenGrid();
         System.out.println(this.initialState);
         System.out.println(this.trafficString);
