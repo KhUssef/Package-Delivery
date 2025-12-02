@@ -207,6 +207,9 @@ public class DeliverySearch {
         System.out.println(this.initialState);
         System.out.println(this.trafficString);
         this.searchAlgorithm.extract(this.initialState, this.trafficString);
+        this.searchAlgorithm = new IterativeDeepening();
+        this.searchAlgorithm.extract(initialState, trafficString);
+        System.out.println(this.searchAlgorithm.search(new String(this.destinations[0][0] + "," + this.destinations[0][1])));
     }
 
     String path(String initialState, String traffic, String goalState) {
