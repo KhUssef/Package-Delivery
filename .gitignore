@@ -1,2 +1,6 @@
 'ai proj'\aiproj\target\classes\ai\proj\*
 *.class
+
+# Maven
+target/
+maven-status/
