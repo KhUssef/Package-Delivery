@@ -202,19 +202,24 @@ public class DeliverySearch {
     }
 
     void test() {
-        
+
         this.searchAlgorithm = new BFS();
         this.GenGrid();
         System.out.println(this.initialState);
         System.out.println(this.trafficString);
         this.searchAlgorithm.extract(this.initialState, this.trafficString);
-       System.out.println(this.searchAlgorithm.search(this.destinations[0][0] + "," + this.destinations[0][1]));
-    this.searchAlgorithm = new IterativeDeepening();
-    this.searchAlgorithm.extract(this.initialState, this.trafficString);
-    System.out.println(this.searchAlgorithm.search(this.destinations[0][0] + "," + this.destinations[0][1]));
+        System.out.println(this.searchAlgorithm.search(this.destinations[0][0] + "," + this.destinations[0][1]));
 
+        this.searchAlgorithm = new IterativeDeepening();
+        this.searchAlgorithm.extract(this.initialState, this.trafficString);
+        System.out.println(this.searchAlgorithm.search(this.destinations[0][0] + "," + this.destinations[0][1]));
 
-       
+        // Test Greedy algorithm
+        Greedy greedyAlgorithm = new Greedy(new h1());
+        greedyAlgorithm.extract(this.initialState, this.trafficString);
+        String goalState = this.destinations[0][0] + "," + this.destinations[0][1];
+        int[][] heuristicValues = new h1().find(goalState, greedyAlgorithm.numTunnels, greedyAlgorithm.rows, greedyAlgorithm.cols, greedyAlgorithm.tunnels);
+        System.out.println("Greedy: " + greedyAlgorithm.search(goalState, heuristicValues));
     }
 
     String path(String initialState, String traffic, String goalState) {
