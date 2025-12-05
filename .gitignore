@@ -1,6 +1,13 @@
-'ai proj'\aiproj\target\classes\ai\proj\*
+'ai proj'/aiproj/target/classes/ai/proj/*
 *.class
 
 # Maven
 target/
 maven-status/
+*.xml
+
+src/main/java/ai/proj/controller/*
+src/main/java/ai/proj/PlannerController.java
+src/main/java/ai/proj/Application.java
+src/main/java/ai/proj/controller/Controller.java
+pom.xml 
