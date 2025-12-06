@@ -19,12 +19,10 @@ public class DFS extends GenericSearch {
 
     @Override
     public String search(String goalState) {
-        // goalState format = initialState + ";" + destinationIndex
+        // goalState format = "x,y" coordinates of the goal
         String[] split = goalState.split(",");
-        int goalIndex = Integer.parseInt(split[split.length - 1]);
-
-        int goalX = this.destinations[goalIndex][0];
-        int goalY = this.destinations[goalIndex][1];
+        int goalX = Integer.parseInt(split[0]);
+        int goalY = Integer.parseInt(split[1]);
 
         // --- COLLECT BEST RESULT OVER ALL STORES ---
         String bestResult = "FAIL;0;0";

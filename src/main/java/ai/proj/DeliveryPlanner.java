@@ -65,8 +65,10 @@ public class DeliveryPlanner {
             case "BFS" -> new BFS();
             case "DFS" -> new DFS();
             case "UCS" -> new UniformCost();
-            case "ASTAR" -> new AStar();
-            // case "GREEDY" -> new Greedy();
+            case "ASTAR1" -> new AStar(1);
+            case "ASTAR2" -> new AStar(2);
+            case "GREEDY1" -> new Greedy(1);
+            case "GREEDY2" -> new Greedy(2);
             case "ITERATIVEDEEPENING" -> new IterativeDeepening();
             default -> null;
         };

@@ -6,8 +6,15 @@ public class AStar extends GenericSearch {
     private int[][] heuristicValues;
     private heuristic heuristicFunction;
 
-    public AStar() {
-        this.heuristicFunction = new h1();
+    public AStar(int heuristicType) {
+        if (heuristicType == 1) {
+            this.heuristicFunction = new h1();
+        } else if (heuristicType == 2) {
+            this.heuristicFunction = new h2();
+        } else {
+            throw new IllegalArgumentException("Invalid heuristic type");
+        }
+        
     }
 
     @Override

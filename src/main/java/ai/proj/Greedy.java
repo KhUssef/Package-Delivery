@@ -25,8 +25,14 @@ public class Greedy extends GenericSearch {
     /**
      * Default constructor using h1 heuristic (Manhattan distance with tunnels)
      */
-    Greedy() {
-        this.heuristic = new h1();
+    Greedy(int heuristicType) {
+        if (heuristicType == 1) {
+            this.heuristic = new h1();
+        } else if (heuristicType == 2) {
+            this.heuristic = new h2();
+        } else {
+            throw new IllegalArgumentException("Invalid heuristic type");
+        }
     }
 
     /**
@@ -66,13 +72,26 @@ public class Greedy extends GenericSearch {
 
     /**
      * Required override from GenericSearch
-     * For Greedy search, use search(String goalState, int[][] heuristicValues) instead
+     * Compute heuristic values first (like A*) then run Greedy using them
      */
     @Override
     public String search(String goalState) {
-        throw new UnsupportedOperationException(
-            "Greedy search requires heuristic values. Use search(String goalState, int[][] heuristicValues)"
+        // Ensure extract(...) was called and grid metadata is available
+        if (this.rows <= 0 || this.cols <= 0) {
+            return "FAIL;0;0";
+        }
+
+        // Default heuristic (Manhattan with tunnels)
+        heuristic h = (this.heuristic != null) ? this.heuristic : new h1();
+        int[][] heuristicValues = h.find(
+                goalState,
+                this.numTunnels,
+                this.rows,
+                this.cols,
+                this.tunnels
         );
+
+        return search(goalState, heuristicValues);
     }
 
     /**
