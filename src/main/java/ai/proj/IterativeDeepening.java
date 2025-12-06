@@ -16,166 +16,115 @@ public class IterativeDeepening extends GenericSearch {
 
     @Override
     public String search(String goalState) {
-
         // Parse goal
         String[] parts = goalState.split(",");
         int goalR = Integer.parseInt(parts[0]);
         int goalC = Integer.parseInt(parts[1]);
 
-        String bestPath = null;
-        int bestStore = -1;
-        int bestDepth = Integer.MAX_VALUE;
+        List<String> bestActions = null;
+        int bestCost = Integer.MAX_VALUE;
+        int totalNodesExpanded = 0;
 
         for (int s = 0; s < stores.length; s++) {
             int startR = stores[s][0];
             int startC = stores[s][1];
 
             for (int depth = 0; depth <= maxDepth; depth++) {
-
                 Set<String> visited = new HashSet<>();
-                PathResult result =
-                        dfsLimited(startR, startC, goalR, goalC, depth, visited, "");
+                PathResult result = dfsLimited(startR, startC, goalR, goalC, depth, visited, new ArrayList<>(), 0);
 
+                // Always accumulate nodes expanded
                 if (result != null) {
-                    if (depth < bestDepth) {
-                        bestDepth = depth;
-                        bestPath = result.path;
-                        bestStore = s;
+                    totalNodesExpanded += result.nodesExpanded;
+                }
+
+                if (result != null && result.actions != null) {
+                    if (result.cost < bestCost) {
+                        bestCost = result.cost;
+                        bestActions = result.actions;
                     }
                     break; // No need deeper for this store
                 }
             }
         }
 
-        if (bestPath == null) return "FAIL";
-        System.out.println(bestStore + ";" + bestPath);
+        if (bestActions == null) {
+            return "FAIL;0;" + totalNodesExpanded;
+        }
 
-        return rebuild(bestStore + ";" + bestPath);
+        // Return unified format: plan;cost;nodesExpanded
+        String plan = String.join(",", bestActions);
+        return plan + ";" + bestCost + ";" + totalNodesExpanded;
     }
+    
     private PathResult dfsLimited(int r, int c,
                                   int goalR, int goalC,
                                   int depthLimit,
                                   Set<String> visited,
-                                  String path) {
+                                  List<String> actions,
+                                  int cost) {
 
-        if (r == goalR && c == goalC)
-            return new PathResult(path);
+        // Count this node as expanded
+        int nodesExpanded = 1;
 
-        if (depthLimit == 0)
-            return null;
+        if (r == goalR && c == goalC) {
+            return new PathResult(new ArrayList<>(actions), cost, nodesExpanded);
+        }
+
+        if (depthLimit == 0) {
+            return new PathResult(null, Integer.MAX_VALUE, nodesExpanded);
+        }
 
         String state = r + "," + c;
-        if (visited.contains(state))
-            return null;
+        if (visited.contains(state)) {
+            return new PathResult(null, Integer.MAX_VALUE, nodesExpanded);
+        }
 
         visited.add(state);
 
-        for (Move mv : successors(r, c)) {
+        // Use generic successor generator
+        String currentState = r + "," + c;
+        List<Successor> successors = getSuccessors(currentState);
 
-            String newPath = path.isEmpty() ? mv.dir : path + ";" + mv.dir;
+        for (Successor succ : successors) {
+            List<String> newActions = new ArrayList<>(actions);
+            newActions.add(succ.action);
+            int newCost = cost + succ.stepCost;
 
             PathResult res = dfsLimited(
-                    mv.r, mv.c,
+                    succ.getRow(), succ.getCol(),
                     goalR, goalC,
                     depthLimit - 1,
                     visited,
-                    newPath
+                    newActions,
+                    newCost
             );
 
-            if (res != null) {
+            if (res != null && res.actions != null) {
                 visited.remove(state);
-                return res;
+                // Accumulate nodes expanded
+                return new PathResult(res.actions, res.cost, nodesExpanded + res.nodesExpanded);
+            }
+            // Accumulate nodes expanded even if this path didn't lead to goal
+            if (res != null) {
+                nodesExpanded += res.nodesExpanded;
             }
         }
 
         visited.remove(state);
-        return null;
-    }
-
-    private List<Move> successors(int r, int c) {
-        List<Move> mv = new ArrayList<>();
-
-        // UP
-        if (r - 1 >= 0 && traffic[r - 1][c][1] > 0)
-            mv.add(new Move(r - 1, c, "U"));
-
-        // RIGHT
-        if (c + 1 < cols && traffic[r][c][0] > 0)
-            mv.add(new Move(r, c + 1, "R"));
-
-        // DOWN
-        if (r + 1 < rows && traffic[r][c][1] > 0)
-            mv.add(new Move(r + 1, c, "D"));
-
-        // LEFT
-        if (c - 1 >= 0 && traffic[r][c - 1][0] > 0)
-            mv.add(new Move(r, c - 1, "L"));
-
-        // TUNNELS (always last)
-        for (int i = 0; i < numTunnels; i++) {
-            int r1 = tunnels[2 * i][0], c1 = tunnels[2 * i][1];
-            int r2 = tunnels[2 * i + 1][0], c2 = tunnels[2 * i + 1][1];
-
-            if (r == r1 && c == c1) mv.add(new Move(r2, c2, "T"));
-            else if (r == r2 && c == c2) mv.add(new Move(r1, c1, "T"));
-        }
-
-        return mv;
-    }
-
-    private static class Move {
-        int r, c;
-        String dir;
-
-        Move(int r, int c, String dir) {
-            this.r = r;
-            this.c = c;
-            this.dir = dir;
-        }
+        return new PathResult(null, Integer.MAX_VALUE, nodesExpanded);
     }
 
     private static class PathResult {
-        String path;
-        PathResult(String path) { this.path = path; }
-    }
-    private String  rebuild(String path){
-        String[] moves = path.split(";");
-        StringBuilder result = new StringBuilder();
-        result.append(this.stores[Integer.parseInt(moves[0])][0]).append(',').append(this.stores[Integer.parseInt(moves[0])][1]).append(';');
-        int current[] = {this.stores[Integer.parseInt(moves[0])][0], this.stores[Integer.parseInt(moves[0])][1]};
-        moves = Arrays.copyOfRange(moves, 1, moves.length);
-        for (String move : moves) {
-            switch( move) {
-                case "R":
-                    current[1] += 1;
-                    break;
-                case "L":
-                    current[1] -= 1;
-                    break;
-                case "U":
-                    current[0] -= 1;
-                    break;
-                case "D":
-                    current[0] += 1;
-                    break;
-                case "T":
-                    // Find the tunnel exit
-                    for (int i = 0; i < numTunnels; i++) {
-                        if (tunnels[i * 2][0] == current[0] && tunnels[i * 2][1] == current[1]) {
-                            current[0] = tunnels[i * 2 + 1][0];
-                            current[1] = tunnels[i * 2 + 1][1];
-                            break;
-                        } else if (tunnels[i * 2 + 1][0] == current[0] && tunnels[i * 2 + 1][1] == current[1]) {
-                            current[0] = tunnels[i * 2][0];
-                            current[1] = tunnels[i * 2][1];
-                            break;
-                        }
-                    }
-                    break;
-            }
-            result.append(current[0]).append(',').append(current[1]).append(';');
+        List<String> actions;
+        int cost;
+        int nodesExpanded;
+        
+        PathResult(List<String> actions, int cost, int nodesExpanded) {
+            this.actions = actions;
+            this.cost = cost;
+            this.nodesExpanded = nodesExpanded;
         }
-        return result.toString();
     }
 }
 
