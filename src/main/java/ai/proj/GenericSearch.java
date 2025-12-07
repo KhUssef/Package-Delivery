@@ -12,11 +12,21 @@ public abstract class GenericSearch {
     protected int[][] stores;
     protected int[][] tunnels;
     protected int numTunnels;
+    // Selected start store coordinates (set by planner/search wrapper)
+    protected int startRow = -1;
+    protected int startCol = -1;
     
     // Global action order (tiebreaker order) - must be used by all search algorithms
     protected String[] tieBreakerOrder = {"up", "down", "left", "right", "tunnel"};
 
     public abstract String search(String goalState);
+
+    // Set the starting store position for algorithms that should not loop over stores
+    public void setStart(String storeState) {
+        String[] parts = storeState.split(",");
+        this.startRow = Integer.parseInt(parts[0]);
+        this.startCol = Integer.parseInt(parts[1]);
+    }
     
     /**
      * Generic successor generator that all search algorithms must use.
@@ -205,23 +215,25 @@ public abstract class GenericSearch {
                 }
             }
         }
-        
-        // Initialize stores array (assuming stores come after tunnels in the format, or extract from grid)
-        // For now, initialize empty as the format doesn't explicitly provide store locations
-        System.out.println("Extraction complete: " + rows + "x" + cols + ", Destinations: " + numDestinations + ", Stores: " + numStores + ", Tunnels: " + numTunnels);
-        for(int i=0; i<numDestinations; i++) {
-            System.out.println("Destination " + i + ": (" + destinations[i][0] + "," + destinations[i][1] + ")");
-        }
-        for(int i=0; i<numTunnels; i++) {
-            System.out.println("Tunnel " + i + ": (" + tunnels[i*2][0] + "," + tunnels[i*2][1] + ") <-> (" + tunnels[i*2+1][0] + "," + tunnels[i*2+1][1] + ")");
-        }
-        for(int r=0; r<rows; r++) {
-            for(int c=0; c<cols; c++) {
-                System.out.println("Traffic at (" + r + "," + c + "): Right=" + traffic[r][c][0] + ", Down=" + traffic[r][c][1]);
+    }
+    public void extract (String initialState, String trafficString, boolean print){
+        extract(initialState, trafficString);
+        if (print){
+            System.out.println("Extraction complete: " + rows + "x" + cols + ", Destinations: " + numDestinations + ", Stores: " + numStores + ", Tunnels: " + numTunnels);
+            for(int i=0; i<numDestinations; i++) {
+                System.out.println("Destination " + i + ": (" + destinations[i][0] + "," + destinations[i][1] + ")");
             }
-        }
-        for(int i=0; i<numStores; i++) {
-            System.out.println("Store " + i + ": (" + stores[i][0] + "," + stores[i][1] + ")");
+            for(int i=0; i<numTunnels; i++) {
+                System.out.println("Tunnel " + i + ": (" + tunnels[i*2][0] + "," + tunnels[i*2][1] + ") <-> (" + tunnels[i*2+1][0] + "," + tunnels[i*2+1][1] + ")");
+            }
+            for(int r=0; r<rows; r++) {
+                for(int c=0; c<cols; c++) {
+                    System.out.println("Traffic at (" + r + "," + c + "): Right=" + traffic[r][c][0] + ", Down=" + traffic[r][c][1]);
+                }
+            }
+            for(int i=0; i<numStores; i++) {
+                System.out.println("Store " + i + ": (" + stores[i][0] + "," + stores[i][1] + ")");
+            }
         }
     }
 }

@@ -30,31 +30,15 @@ public class BFS extends GenericSearch {
         int goalR = Integer.parseInt(coords[0]);
         int goalC = Integer.parseInt(coords[1]);
         
-        String bestPlan = null;
-        int bestCost = Integer.MAX_VALUE;
-        int totalNodesExpanded = 0;
-        
-        // Try all stores and find the best one
-        for (int s = 0; s < stores.length; s++) {
-            int startR = stores[s][0];
-            int startC = stores[s][1];
-            
-            // Run BFS from this store
-            BFSResult result = bfsFromStore(startR, startC, goalR, goalC);
-            totalNodesExpanded += result.nodesExpanded;
-            
-            if (result.actions != null && result.cost < bestCost) {
-                bestCost = result.cost;
-                bestPlan = String.join(",", result.actions);
-            }
+        // Single-store search: start coordinates set via GenericSearch.setStart
+        int startR = (startRow >= 0 ? startRow : stores[0][0]);
+        int startC = (startCol >= 0 ? startCol : stores[0][1]);
+
+        BFSResult result = bfsFromStore(startR, startC, goalR, goalC);
+        if (result.actions == null) {
+            return "FAIL;0;" + result.nodesExpanded;
         }
-        
-        if (bestPlan == null) {
-            return "FAIL;0;" + totalNodesExpanded;
-        }
-        
-        // Return unified format: plan;cost;nodesExpanded
-        return bestPlan + ";" + bestCost + ";" + totalNodesExpanded;
+        return String.join(",", result.actions) + ";" + result.cost + ";" + result.nodesExpanded;
     }
     
     private BFSResult bfsFromStore(int startR, int startC, int goalR, int goalC) {

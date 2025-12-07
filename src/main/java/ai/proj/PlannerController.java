@@ -86,4 +86,13 @@ public class PlannerController {
         String result = planner.planForGoal(s, goal);
         return ResponseEntity.ok(result);
     }
+
+    // Benchmark: run plan() multiple times and return average CPU/RAM/time
+    @PostMapping("/benchmark")
+    public ResponseEntity<String> benchmark(@RequestParam(name = "strategy", required = false) String strategy,
+                                            @RequestParam(name = "runs", defaultValue = "5") int runs) {
+        String strategyName = (strategy == null || strategy.isBlank()) ? "ITERATIVEDEEPENING" : strategy.toUpperCase();
+        String result = planner.benchmark(strategyName, runs);
+        return ResponseEntity.ok(result);
+    }
 }

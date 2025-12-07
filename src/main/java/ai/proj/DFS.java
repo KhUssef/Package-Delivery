@@ -24,22 +24,16 @@ public class DFS extends GenericSearch {
         int goalX = Integer.parseInt(split[0]);
         int goalY = Integer.parseInt(split[1]);
 
-        // --- COLLECT BEST RESULT OVER ALL STORES ---
-        String bestResult = "FAIL;0;0";
-        int bestExpanded = Integer.MAX_VALUE;
-
-        // Try each store as a start
-        for (int s = 0; s < numStores; s++) {
-            int startX = stores[s][0];
-            int startY = stores[s][1];
+        // Single-store search: start coordinates set via GenericSearch.setStart
+        int startX = (startRow >= 0 ? startRow : stores[0][0]);
+        int startY = (startCol >= 0 ? startCol : stores[0][1]);
 
             Stack<Node> stack = new Stack<>();
             HashSet<String> visited = new HashSet<>();
 
             stack.push(new Node(startX, startY, new ArrayList<>(), 0));
 
-            int nodesExpanded = 0;
-            boolean found = false;
+        int nodesExpanded = 0;
 
             while (!stack.isEmpty()) {
                 Node curr = stack.pop();
@@ -54,20 +48,8 @@ public class DFS extends GenericSearch {
 
                 // Goal check
                 if (curr.x == goalX && curr.y == goalY) {
-                    found = true;
-                    
-                    // Format: plan;cost;nodesExpanded
-                    // plan is comma-separated list of actions
                     String plan = String.join(",", curr.actions);
-                    String result = plan + ";" + curr.cost + ";" + nodesExpanded;
-
-                    // Keep best (least expanded)
-                    if (nodesExpanded < bestExpanded) {
-                        bestExpanded = nodesExpanded;
-                        bestResult = result;
-                    }
-
-                    break; // DFS store finished
+                    return plan + ";" + curr.cost + ";" + nodesExpanded;
                 }
 
                 // Expand DFS neighbors using generic successor generator
@@ -85,8 +67,6 @@ public class DFS extends GenericSearch {
                     }
                 }
             }
-        }
-
-        return bestResult;
+        return "FAIL;0;" + nodesExpanded;
     }
 }
