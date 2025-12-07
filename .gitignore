@@ -6,3 +6,4 @@ target/
 maven-status/
 *.xml
 pom.xml 
+/.vscode/launch.json
