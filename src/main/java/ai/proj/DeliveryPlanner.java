@@ -385,11 +385,11 @@ public class DeliveryPlanner {
 
     // Utility: extract final cost from search result string (implementation depends on your search)
     private int extractResultCost(String result) {
-        // Expected format: plan;cost;nodesExpanded
+        // Expected format: x,y;plan;cost;nodesExpanded
         try {
             String[] parts = result.split(";");
-            if (parts.length >= 2) {
-                return Integer.parseInt(parts[1]);
+            if (parts.length >= 3) {
+                return Integer.parseInt(parts[2]);
             }
             return Integer.MAX_VALUE;
         } catch (Exception e) {
