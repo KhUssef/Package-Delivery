@@ -37,39 +37,26 @@ public class UniformCost extends GenericSearch {
         String[] goalParts = goalState.split("[,;]");
         int goalRow = Integer.parseInt(goalParts[0]);
         int goalCol = Integer.parseInt(goalParts[1]);
-        
-        // Find the store with minimum path cost to the goal
-        Node bestSolution = null;
-        int minCost = Integer.MAX_VALUE;
-        int totalNodesExpanded = 0;
-        
-        for (int i = 0; i < numStores; i++) {
-            UCSResult result = uniformCostSearch(stores[i][0], stores[i][1], goalRow, goalCol);
-            totalNodesExpanded += result.nodesExpanded;
-            if (result.solution != null && result.solution.cost < minCost) {
-                minCost = result.solution.cost;
-                bestSolution = result.solution;
-            }
+
+        int startRowEff = (startRow >= 0 ? startRow : stores[0][0]);
+        int startColEff = (startCol >= 0 ? startCol : stores[0][1]);
+
+        UCSResult result = uniformCostSearch(startRowEff, startColEff, goalRow, goalCol);
+        if (result.solution == null) {
+            return "FAIL;0;" + result.nodesExpanded;
         }
-        
-        if (bestSolution == null) {
-            return "FAIL;0;" + totalNodesExpanded;
-        }
-        
+
         // Reconstruct path with actions
         List<String> actions = new ArrayList<>();
-        Node current = bestSolution;
-        
+        Node current = result.solution;
         while (current != null) {
             if (current.action != null) {
                 actions.add(0, current.action);
             }
             current = current.parent;
         }
-        
-        // Return unified format: plan;cost;nodesExpanded
         String plan = String.join(",", actions);
-        return plan + ";" + bestSolution.cost + ";" + totalNodesExpanded;
+        return plan + ";" + result.solution.cost + ";" + result.nodesExpanded;
     }
     
     private UCSResult uniformCostSearch(int startRow, int startCol, int goalRow, int goalCol) {

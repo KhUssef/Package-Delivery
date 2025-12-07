@@ -24,41 +24,24 @@ public class AStar extends GenericSearch {
         int goalR = Integer.parseInt(coords[0]);
         int goalC = Integer.parseInt(coords[1]);
         
-        // Compute heuristic values
-        this.heuristicValues = this.heuristicFunction.find(goalState, this.numTunnels, this.rows, this.cols, this.tunnels);
-        
-        // Track best solution across all stores
-        List<String> bestActions = null;
-        int bestCost = Integer.MAX_VALUE;
-        int totalNodesExpanded = 0;
-        
-        // Try searching from each store location
-        for (int s = 0; s < stores.length; s++) {
-            int startR = stores[s][0];
-            int startC = stores[s][1];
-            
-            // Run A* search from current store
-            AStarResult result = aStarSearch(startR, startC, goalR, goalC);
-            totalNodesExpanded += result.nodesExpanded;
-            
-            // Update best solution if this path has lower cost
-            if (result.actions != null && result.cost < bestCost) {
-                bestCost = result.cost;
-                bestActions = result.actions;
-            }
+        // Lazy compute heuristic values per position and cache in matrix
+        this.heuristicValues = new int[this.rows][this.cols];
+        for (int i = 0; i < this.rows; i++) {
+            Arrays.fill(this.heuristicValues[i], -1);
         }
         
-        // Return failure if no path found from any store
-        if (bestActions == null) {
-            return "FAIL;0;" + totalNodesExpanded;
+        int startR = (startRow >= 0 ? startRow : stores[0][0]);
+        int startC = (startCol >= 0 ? startCol : stores[0][1]);
+
+        AStarResult result = aStarSearch(startR, startC, goalR, goalC, goalState);
+        if (result.actions == null) {
+            return "FAIL;0;" + result.nodesExpanded;
         }
-        
-        // Return unified format: plan;cost;nodesExpanded
-        String plan = String.join(",", bestActions);
-        return plan + ";" + bestCost + ";" + totalNodesExpanded;
+        String plan = String.join(",", result.actions);
+        return plan + ";" + result.cost + ";" + result.nodesExpanded;
     }
     
-    private AStarResult aStarSearch(int startR, int startC, int goalR, int goalC) {
+    private AStarResult aStarSearch(int startR, int startC, int goalR, int goalC, String goalState) {
         // Priority queue ordered by f(n) = g(n) + h(n)
         PriorityQueue<Node> frontier = new PriorityQueue<>(
             Comparator.comparingInt(n -> n.cost + n.heuristicValue)
@@ -73,7 +56,7 @@ public class AStar extends GenericSearch {
             startC,
             new ArrayList<>(),
             0,
-            heuristicValues[startR][startC]
+            getHeuristicCached(startR, startC, goalState)
         );
         frontier.add(initialNode);
         
@@ -112,7 +95,7 @@ public class AStar extends GenericSearch {
                     int newCost = currentNode.cost + succ.stepCost;
                     
                     // Get heuristic value h(n) for new position
-                    int newHeuristic = heuristicValues[succ.getRow()][succ.getCol()];
+                    int newHeuristic = getHeuristicCached(succ.getRow(), succ.getCol(), goalState);
                     
                     // Create successor node
                     Node successor = new Node(succ.getRow(), succ.getCol(), newActions, newCost, newHeuristic);
@@ -123,6 +106,13 @@ public class AStar extends GenericSearch {
         
         // No path found from this starting position
         return new AStarResult(null, Integer.MAX_VALUE, nodesExpanded);
+    }
+
+    private int getHeuristicCached(int r, int c, String goalState) {
+        if (heuristicValues[r][c] >= 0) return heuristicValues[r][c];
+        int h = this.heuristicFunction.findForPosition(r + "," + c, goalState, this.numTunnels, this.rows, this.cols, this.tunnels);
+        heuristicValues[r][c] = h;
+        return h;
     }
     
     /**

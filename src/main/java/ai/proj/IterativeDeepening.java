@@ -16,115 +16,86 @@ public class IterativeDeepening extends GenericSearch {
 
     @Override
     public String search(String goalState) {
-        // Parse goal
         String[] parts = goalState.split(",");
         int goalR = Integer.parseInt(parts[0]);
         int goalC = Integer.parseInt(parts[1]);
 
-        List<String> bestActions = null;
-        int bestCost = Integer.MAX_VALUE;
+        int startR = (startRow >= 0 ? startRow : stores[0][0]);
+        int startC = (startCol >= 0 ? startCol : stores[0][1]);
+
         int totalNodesExpanded = 0;
 
-        for (int s = 0; s < stores.length; s++) {
-            int startR = stores[s][0];
-            int startC = stores[s][1];
+        for (int depth = 0; depth <= maxDepth; depth++) {
+            List<String> actions = new ArrayList<>();
+            Set<String> pathSet = new HashSet<>();
+            MutableInt nodesExpanded = new MutableInt(0);
+            MutableInt totalCost = new MutableInt(0);
 
-            for (int depth = 0; depth <= maxDepth; depth++) {
-                Set<String> visited = new HashSet<>();
-                PathResult result = dfsLimited(startR, startC, goalR, goalC, depth, visited, new ArrayList<>(), 0);
+            boolean found = dfsLimited(startR, startC, goalR, goalC, depth, actions, 0, pathSet, nodesExpanded, totalCost);
 
-                // Always accumulate nodes expanded
-                if (result != null) {
-                    totalNodesExpanded += result.nodesExpanded;
-                }
+            totalNodesExpanded += nodesExpanded.value;
 
-                if (result != null && result.actions != null) {
-                    if (result.cost < bestCost) {
-                        bestCost = result.cost;
-                        bestActions = result.actions;
-                    }
-                    break; // No need deeper for this store
-                }
+            if (found) {
+                String plan = String.join(",", actions);
+                return plan + ";" + totalCost.value + ";" + totalNodesExpanded;
             }
         }
 
-        if (bestActions == null) {
-            return "FAIL;0;" + totalNodesExpanded;
-        }
-
-        // Return unified format: plan;cost;nodesExpanded
-        String plan = String.join(",", bestActions);
-        return plan + ";" + bestCost + ";" + totalNodesExpanded;
+        return "FAIL;0;" + totalNodesExpanded;
     }
-    
-    private PathResult dfsLimited(int r, int c,
-                                  int goalR, int goalC,
-                                  int depthLimit,
-                                  Set<String> visited,
-                                  List<String> actions,
-                                  int cost) {
 
-        // Count this node as expanded
-        int nodesExpanded = 1;
+    private boolean dfsLimited(int r, int c,
+                               int goalR, int goalC,
+                               int depthLimit,
+                               List<String> actions,
+                               int cost,
+                               Set<String> pathSet,
+                               MutableInt nodesExpanded,
+                               MutableInt totalCost) {
+
+        nodesExpanded.value++;
 
         if (r == goalR && c == goalC) {
-            return new PathResult(new ArrayList<>(actions), cost, nodesExpanded);
+            totalCost.value = cost; // set total cost when goal is found
+            return true;
         }
 
         if (depthLimit == 0) {
-            return new PathResult(null, Integer.MAX_VALUE, nodesExpanded);
+            return false;
         }
 
         String state = r + "," + c;
-        if (visited.contains(state)) {
-            return new PathResult(null, Integer.MAX_VALUE, nodesExpanded);
+        if (pathSet.contains(state)) {
+            return false; // avoid cycles along current path
         }
 
-        visited.add(state);
+        pathSet.add(state);
 
-        // Use generic successor generator
-        String currentState = r + "," + c;
-        List<Successor> successors = getSuccessors(currentState);
-
+        List<Successor> successors = getSuccessors(state);
         for (Successor succ : successors) {
-            List<String> newActions = new ArrayList<>(actions);
-            newActions.add(succ.action);
-            int newCost = cost + succ.stepCost;
-
-            PathResult res = dfsLimited(
-                    succ.getRow(), succ.getCol(),
-                    goalR, goalC,
-                    depthLimit - 1,
-                    visited,
-                    newActions,
-                    newCost
-            );
-
-            if (res != null && res.actions != null) {
-                visited.remove(state);
-                // Accumulate nodes expanded
-                return new PathResult(res.actions, res.cost, nodesExpanded + res.nodesExpanded);
+            actions.add(succ.action);
+            boolean found = dfsLimited(succ.getRow(), succ.getCol(),
+                                       goalR, goalC,
+                                       depthLimit - 1,
+                                       actions,
+                                       cost + succ.stepCost,
+                                       pathSet,
+                                       nodesExpanded,
+                                       totalCost);
+            if (found) {
+                return true; // solution found, propagate upward
             }
-            // Accumulate nodes expanded even if this path didn't lead to goal
-            if (res != null) {
-                nodesExpanded += res.nodesExpanded;
-            }
+            actions.remove(actions.size() - 1); // backtrack
         }
 
-        visited.remove(state);
-        return new PathResult(null, Integer.MAX_VALUE, nodesExpanded);
+        pathSet.remove(state); // backtrack
+        return false;
     }
 
-    private static class PathResult {
-        List<String> actions;
-        int cost;
-        int nodesExpanded;
-        
-        PathResult(List<String> actions, int cost, int nodesExpanded) {
-            this.actions = actions;
-            this.cost = cost;
-            this.nodesExpanded = nodesExpanded;
-        }
+    // Mutable integer to pass by reference
+    private static class MutableInt {
+        int value = 0;
+        MutableInt(int v) { value = v; }
+        MutableInt() {}
     }
 }
-

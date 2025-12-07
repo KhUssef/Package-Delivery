@@ -29,9 +29,10 @@ public class DeliverySearch {
         return this.strategy.search(goalState);
     }
 
-    // Utility wrapper that you already defined
-    public String path(String initialState, String traffic, String goalState) {
+    // Utility wrapper: run search from a specific store to a goal
+    public String path(String initialState, String traffic, String storeState, String goalState) {
         this.extract(initialState, traffic);
+        this.strategy.setStart(storeState);
         return this.strategy.search(goalState);
     }
 }

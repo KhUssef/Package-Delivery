@@ -81,17 +81,30 @@ public class Greedy extends GenericSearch {
             return "FAIL;0;0";
         }
 
-        // Default heuristic (Manhattan with tunnels)
-        heuristic h = (this.heuristic != null) ? this.heuristic : new h1();
-        int[][] heuristicValues = h.find(
-                goalState,
-                this.numTunnels,
-                this.rows,
-                this.cols,
-                this.tunnels
-        );
+        // Lazy compute heuristic per position and cache
+        int[][] heuristicValues = new int[this.rows][this.cols];
+        for (int i = 0; i < this.rows; i++) {
+            Arrays.fill(heuristicValues[i], -1);
+        }
 
-        return search(goalState, heuristicValues);
+        // Use provided heuristic or default to h1
+        heuristic h = (this.heuristic != null) ? this.heuristic : new h1();
+
+        // Delegate to greedySearch with per-position cache usage
+        // Parse goal coordinates for initial nodes
+        String[] coords = goalState.split(",");
+        int goalR = Integer.parseInt(coords[0]);
+        int goalC = Integer.parseInt(coords[1]);
+
+        int startR = (startRow >= 0 ? startRow : stores[0][0]);
+        int startC = (startCol >= 0 ? startCol : stores[0][1]);
+
+        GreedyResult result = greedySearchWithCache(startR, startC, goalR, goalC, heuristicValues, h, goalState);
+        if (result.actions == null) {
+            return "FAIL;0;" + result.nodesExpanded;
+        }
+        String plan = String.join(",", result.actions);
+        return plan + ";" + result.cost + ";" + result.nodesExpanded;
     }
 
     /**
@@ -109,35 +122,16 @@ public class Greedy extends GenericSearch {
         int goalR = Integer.parseInt(coords[0]);
         int goalC = Integer.parseInt(coords[1]);
 
-        // Track best solution across all stores
-        List<String> bestActions = null;
-        int bestCost = Integer.MAX_VALUE;
-        int totalNodesExpanded = 0;
+        int startR = (startRow >= 0 ? startRow : stores[0][0]);
+        int startC = (startCol >= 0 ? startCol : stores[0][1]);
 
-        // Try searching from each store location
-        for (int s = 0; s < stores.length; s++) {
-            int startR = stores[s][0];
-            int startC = stores[s][1];
-
-            // Run greedy search from current store
-            GreedyResult result = greedySearch(startR, startC, goalR, goalC, heuristicValues);
-            totalNodesExpanded += result.nodesExpanded;
-
-            // Update best solution if this path has lower cost
-            if (result.actions != null && result.cost < bestCost) {
-                bestCost = result.cost;
-                bestActions = result.actions;
-            }
+        heuristic h = (this.heuristic != null) ? this.heuristic : new h1();
+        GreedyResult result = greedySearchWithCache(startR, startC, goalR, goalC, heuristicValues, h, goalState);
+        if (result.actions == null) {
+            return "FAIL;0;" + result.nodesExpanded;
         }
-
-        // Return failure if no path found from any store
-        if (bestActions == null) {
-            return "FAIL;0;" + totalNodesExpanded;
-        }
-
-        // Return unified format: plan;cost;nodesExpanded
-        String plan = String.join(",", bestActions);
-        return plan + ";" + bestCost + ";" + totalNodesExpanded;
+        String plan = String.join(",", result.actions);
+        return plan + ";" + result.cost + ";" + result.nodesExpanded;
     }
 
     /**
@@ -151,7 +145,7 @@ public class Greedy extends GenericSearch {
      * @param heuristicValues Precomputed heuristic values for each cell
      * @return GreedyResult containing path, cost, and statistics
      */
-    private GreedyResult greedySearch(int startR, int startC, int goalR, int goalC, int[][] heuristicValues) {
+    private GreedyResult greedySearchWithCache(int startR, int startC, int goalR, int goalC, int[][] heuristicValues, heuristic h, String goalState) {
         // Priority queue - nodes with lower heuristic values have higher priority
         PriorityQueue<Node> frontier = new PriorityQueue<>(
             Comparator.comparingInt(n -> n.heuristicValue)
@@ -162,13 +156,8 @@ public class Greedy extends GenericSearch {
         int nodesExpanded = 0;
 
         // Create and add initial node
-        Node initialNode = new Node(
-            startR,
-            startC,
-            new ArrayList<>(),
-            0,
-            heuristicValues[startR][startC]
-        );
+        int hStart = getHeuristicCached(startR, startC, heuristicValues, h, goalState);
+        Node initialNode = new Node(startR, startC, new ArrayList<>(), 0, hStart);
         frontier.add(initialNode);
 
         // Main search loop
@@ -204,7 +193,7 @@ public class Greedy extends GenericSearch {
                 int newCost = currentNode.cost + succ.stepCost;
 
                 // Get heuristic value for new position
-                int newHeuristic = heuristicValues[succ.getRow()][succ.getCol()];
+                int newHeuristic = getHeuristicCached(succ.getRow(), succ.getCol(), heuristicValues, h, goalState);
 
                 // Create successor node
                 Node successor = new Node(succ.getRow(), succ.getCol(), newActions, newCost, newHeuristic);
@@ -236,5 +225,12 @@ public class Greedy extends GenericSearch {
             this.cost = cost;
             this.nodesExpanded = nodesExpanded;
         }
+    }
+
+    private int getHeuristicCached(int r, int c, int[][] cache, heuristic h, String goalState) {
+        if (cache[r][c] >= 0) return cache[r][c];
+        int hv = h.findForPosition(r + "," + c, goalState, this.numTunnels, this.rows, this.cols, this.tunnels);
+        cache[r][c] = hv;
+        return hv;
     }
 }
