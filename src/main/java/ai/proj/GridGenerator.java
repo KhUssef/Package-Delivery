@@ -151,7 +151,7 @@ public class GridGenerator {
                     if (traffic[r][c][d] != Integer.MAX_VALUE &&
                         traffic[r][c][d] == 0) {
 
-                        traffic[r][c][d] = rand.nextInt(1, 4);
+                        traffic[r][c][d] = rand.nextInt(1, 5);
                     }
                 }
             }
