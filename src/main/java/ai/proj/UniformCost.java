@@ -56,7 +56,7 @@ public class UniformCost extends GenericSearch {
             current = current.parent;
         }
         String plan = String.join(",", actions);
-        return plan + ";" + result.solution.cost + ";" + result.nodesExpanded;
+        return startRowEff + "," + startColEff + ";" + plan + ";" + result.solution.cost + ";" + result.nodesExpanded;
     }
     
     private UCSResult uniformCostSearch(int startRow, int startCol, int goalRow, int goalCol) {

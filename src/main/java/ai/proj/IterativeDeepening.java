@@ -37,7 +37,7 @@ public class IterativeDeepening extends GenericSearch {
 
             if (found) {
                 String plan = String.join(",", actions);
-                return plan + ";" + totalCost.value + ";" + totalNodesExpanded;
+                return startR + "," + startC + ";" + plan + ";" + totalCost.value + ";" + totalNodesExpanded;
             }
 
             // Hint GC to reclaim objects from this depth iteration before next

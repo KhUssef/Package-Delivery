@@ -38,7 +38,7 @@ public class BFS extends GenericSearch {
         if (result.actions == null) {
             return "FAIL;0;" + result.nodesExpanded;
         }
-        return String.join(",", result.actions) + ";" + result.cost + ";" + result.nodesExpanded;
+        return startR + "," + startC + ";" + String.join(",", result.actions) + ";" + result.cost + ";" + result.nodesExpanded;
     }
     
     private BFSResult bfsFromStore(int startR, int startC, int goalR, int goalC) {

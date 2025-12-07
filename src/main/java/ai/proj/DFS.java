@@ -49,7 +49,7 @@ public class DFS extends GenericSearch {
                 // Goal check
                 if (curr.x == goalX && curr.y == goalY) {
                     String plan = String.join(",", curr.actions);
-                    return plan + ";" + curr.cost + ";" + nodesExpanded;
+                    return startX + "," + startY + ";" + plan + ";" + curr.cost + ";" + nodesExpanded;
                 }
 
                 // Expand DFS neighbors using generic successor generator

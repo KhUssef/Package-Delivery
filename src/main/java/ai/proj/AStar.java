@@ -38,7 +38,7 @@ public class AStar extends GenericSearch {
             return "FAIL;0;" + result.nodesExpanded;
         }
         String plan = String.join(",", result.actions);
-        return plan + ";" + result.cost + ";" + result.nodesExpanded;
+        return startR + "," + startC + ";" + plan + ";" + result.cost + ";" + result.nodesExpanded;
     }
     
     private AStarResult aStarSearch(int startR, int startC, int goalR, int goalC, String goalState) {
