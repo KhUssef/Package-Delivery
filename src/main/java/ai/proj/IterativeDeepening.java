@@ -16,166 +16,90 @@ public class IterativeDeepening extends GenericSearch {
 
     @Override
     public String search(String goalState) {
-
-        // Parse goal
         String[] parts = goalState.split(",");
         int goalR = Integer.parseInt(parts[0]);
         int goalC = Integer.parseInt(parts[1]);
 
-        String bestPath = null;
-        int bestStore = -1;
-        int bestDepth = Integer.MAX_VALUE;
+        int startR = (startRow >= 0 ? startRow : stores[0][0]);
+        int startC = (startCol >= 0 ? startCol : stores[0][1]);
 
-        for (int s = 0; s < stores.length; s++) {
-            int startR = stores[s][0];
-            int startC = stores[s][1];
+        int totalNodesExpanded = 0;
 
-            for (int depth = 0; depth <= maxDepth; depth++) {
+        for (int depth = 0; depth <= maxDepth; depth++) {
+            List<String> actions = new ArrayList<>();
+            Set<String> pathSet = new HashSet<>();
+            MutableInt nodesExpanded = new MutableInt(0);
+            MutableInt totalCost = new MutableInt(0);
 
-                Set<String> visited = new HashSet<>();
-                PathResult result =
-                        dfsLimited(startR, startC, goalR, goalC, depth, visited, "");
+            boolean found = dfsLimited(startR, startC, goalR, goalC, depth, actions, 0, pathSet, nodesExpanded, totalCost);
 
-                if (result != null) {
-                    if (depth < bestDepth) {
-                        bestDepth = depth;
-                        bestPath = result.path;
-                        bestStore = s;
-                    }
-                    break; // No need deeper for this store
-                }
+            totalNodesExpanded += nodesExpanded.value;
+
+            if (found) {
+                String plan = String.join(",", actions);
+                return startR + "," + startC + ";" + plan + ";" + totalCost.value + ";" + totalNodesExpanded;
             }
+
+            // Hint GC to reclaim objects from this depth iteration before next
+            // Note: This is just a hint; JVM may ignore it
+            System.gc();
         }
 
-        if (bestPath == null) return "FAIL";
-        System.out.println(bestStore + ";" + bestPath);
-
-        return rebuild(bestStore + ";" + bestPath);
+        return "FAIL;0;" + totalNodesExpanded;
     }
-    private PathResult dfsLimited(int r, int c,
-                                  int goalR, int goalC,
-                                  int depthLimit,
-                                  Set<String> visited,
-                                  String path) {
 
-        if (r == goalR && c == goalC)
-            return new PathResult(path);
+    private boolean dfsLimited(int r, int c,
+                               int goalR, int goalC,
+                               int depthLimit,
+                               List<String> actions,
+                               int cost,
+                               Set<String> pathSet,
+                               MutableInt nodesExpanded,
+                               MutableInt totalCost) {
 
-        if (depthLimit == 0)
-            return null;
+        nodesExpanded.value++;
+
+        if (r == goalR && c == goalC) {
+            totalCost.value = cost; // set total cost when goal is found
+            return true;
+        }
+
+        if (depthLimit == 0) {
+            return false;
+        }
 
         String state = r + "," + c;
-        if (visited.contains(state))
-            return null;
+        if (pathSet.contains(state)) {
+            return false; // avoid cycles along current path
+        }
 
-        visited.add(state);
+        pathSet.add(state);
 
-        for (Move mv : successors(r, c)) {
-
-            String newPath = path.isEmpty() ? mv.dir : path + ";" + mv.dir;
-
-            PathResult res = dfsLimited(
-                    mv.r, mv.c,
-                    goalR, goalC,
-                    depthLimit - 1,
-                    visited,
-                    newPath
-            );
-
-            if (res != null) {
-                visited.remove(state);
-                return res;
+        List<Successor> successors = getSuccessors(state);
+        for (Successor succ : successors) {
+            actions.add(succ.action);
+            boolean found = dfsLimited(succ.getRow(), succ.getCol(),
+                                       goalR, goalC,
+                                       depthLimit - 1,
+                                       actions,
+                                       cost + succ.stepCost,
+                                       pathSet,
+                                       nodesExpanded,
+                                       totalCost);
+            if (found) {
+                return true; // solution found, propagate upward
             }
+            actions.remove(actions.size() - 1); // backtrack
         }
 
-        visited.remove(state);
-        return null;
+        pathSet.remove(state); // backtrack
+        return false;
     }
 
-    private List<Move> successors(int r, int c) {
-        List<Move> mv = new ArrayList<>();
-
-        // UP
-        if (r - 1 >= 0 && traffic[r - 1][c][1] > 0)
-            mv.add(new Move(r - 1, c, "U"));
-
-        // RIGHT
-        if (c + 1 < cols && traffic[r][c][0] > 0)
-            mv.add(new Move(r, c + 1, "R"));
-
-        // DOWN
-        if (r + 1 < rows && traffic[r][c][1] > 0)
-            mv.add(new Move(r + 1, c, "D"));
-
-        // LEFT
-        if (c - 1 >= 0 && traffic[r][c - 1][0] > 0)
-            mv.add(new Move(r, c - 1, "L"));
-
-        // TUNNELS (always last)
-        for (int i = 0; i < numTunnels; i++) {
-            int r1 = tunnels[2 * i][0], c1 = tunnels[2 * i][1];
-            int r2 = tunnels[2 * i + 1][0], c2 = tunnels[2 * i + 1][1];
-
-            if (r == r1 && c == c1) mv.add(new Move(r2, c2, "T"));
-            else if (r == r2 && c == c2) mv.add(new Move(r1, c1, "T"));
-        }
-
-        return mv;
-    }
-
-    private static class Move {
-        int r, c;
-        String dir;
-
-        Move(int r, int c, String dir) {
-            this.r = r;
-            this.c = c;
-            this.dir = dir;
-        }
-    }
-
-    private static class PathResult {
-        String path;
-        PathResult(String path) { this.path = path; }
-    }
-    private String  rebuild(String path){
-        String[] moves = path.split(";");
-        StringBuilder result = new StringBuilder();
-        result.append(this.stores[Integer.parseInt(moves[0])][0]).append(',').append(this.stores[Integer.parseInt(moves[0])][1]).append(';');
-        int current[] = {this.stores[Integer.parseInt(moves[0])][0], this.stores[Integer.parseInt(moves[0])][1]};
-        moves = Arrays.copyOfRange(moves, 1, moves.length);
-        for (String move : moves) {
-            switch( move) {
-                case "R":
-                    current[1] += 1;
-                    break;
-                case "L":
-                    current[1] -= 1;
-                    break;
-                case "U":
-                    current[0] -= 1;
-                    break;
-                case "D":
-                    current[0] += 1;
-                    break;
-                case "T":
-                    // Find the tunnel exit
-                    for (int i = 0; i < numTunnels; i++) {
-                        if (tunnels[i * 2][0] == current[0] && tunnels[i * 2][1] == current[1]) {
-                            current[0] = tunnels[i * 2 + 1][0];
-                            current[1] = tunnels[i * 2 + 1][1];
-                            break;
-                        } else if (tunnels[i * 2 + 1][0] == current[0] && tunnels[i * 2 + 1][1] == current[1]) {
-                            current[0] = tunnels[i * 2][0];
-                            current[1] = tunnels[i * 2][1];
-                            break;
-                        }
-                    }
-                    break;
-            }
-            result.append(current[0]).append(',').append(current[1]).append(';');
-        }
-        return result.toString();
+    // Mutable integer to pass by reference
+    private static class MutableInt {
+        int value = 0;
+        MutableInt(int v) { value = v; }
+        MutableInt() {}
     }
 }
-

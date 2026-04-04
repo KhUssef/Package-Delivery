@@ -6,47 +6,36 @@ public class DFS extends GenericSearch {
 
     private static class Node {
         int x, y;
-        String path;
+        List<String> actions;  // List of canonical action names
         int cost;
 
-        Node(int x, int y, String path, int cost) {
+        Node(int x, int y, List<String> actions, int cost) {
             this.x = x;
             this.y = y;
-            this.path = path;
+            this.actions = new ArrayList<>(actions);
             this.cost = cost;
         }
     }
 
     @Override
     public String search(String goalState) {
-
-        // goalState format = initialState + ";" + destinationIndex
+        // goalState format = "x,y" coordinates of the goal
         String[] split = goalState.split(",");
-        int goalIndex = Integer.parseInt(split[split.length - 1]);
+        int goalX = Integer.parseInt(split[0]);
+        int goalY = Integer.parseInt(split[1]);
 
-        int goalX = this.destinations[goalIndex][0];
-        int goalY = this.destinations[goalIndex][1];
-
-        // --- COLLECT BEST RESULT OVER ALL STORES ---
-        String bestResult = "FAIL";
-        int bestExpanded = Integer.MAX_VALUE;
-
-        // Try each store as a start
-        for (int s = 0; s < numStores; s++) {
-
-            int startX = stores[s][0];
-            int startY = stores[s][1];
+        // Single-store search: start coordinates set via GenericSearch.setStart
+        int startX = (startRow >= 0 ? startRow : stores[0][0]);
+        int startY = (startCol >= 0 ? startCol : stores[0][1]);
 
             Stack<Node> stack = new Stack<>();
             HashSet<String> visited = new HashSet<>();
 
-            stack.push(new Node(startX, startY, "", 0));
+            stack.push(new Node(startX, startY, new ArrayList<>(), 0));
 
-            int nodesExpanded = 0;
-            boolean found = false;
+        int nodesExpanded = 0;
 
             while (!stack.isEmpty()) {
-
                 Node curr = stack.pop();
                 nodesExpanded++;
 
@@ -59,76 +48,25 @@ public class DFS extends GenericSearch {
 
                 // Goal check
                 if (curr.x == goalX && curr.y == goalY) {
-                    found = true;
-
-                    String result = curr.path + ";" + curr.cost + ";" + nodesExpanded;
-
-                    // Keep best (least expanded)
-                    if (nodesExpanded < bestExpanded) {
-                        bestExpanded = nodesExpanded;
-                        bestResult = result;
-                    }
-
-                    break; // DFS store finished
+                    String plan = String.join(",", curr.actions);
+                    return startX + "," + startY + ";" + plan + ";" + curr.cost + ";" + nodesExpanded;
                 }
 
-                // Expand DFS neighbors
-                for (Node nxt : expand(curr)) {
-                    if (!visited.contains(nxt.x + "," + nxt.y)) {
-                        stack.push(nxt);
+                // Expand DFS neighbors using generic successor generator
+                String currentState = curr.x + "," + curr.y;
+                List<Successor> successors = getSuccessors(currentState);
+                
+                // Add successors in reverse order to maintain tieBreakerOrder when popping from stack
+                for (int i = successors.size() - 1; i >= 0; i--) {
+                    Successor succ = successors.get(i);
+                    String newKey = succ.getRow() + "," + succ.getCol();
+                    if (!visited.contains(newKey)) {
+                        List<String> newActions = new ArrayList<>(curr.actions);
+                        newActions.add(succ.action);
+                        stack.push(new Node(succ.getRow(), succ.getCol(), newActions, curr.cost + succ.stepCost));
                     }
                 }
             }
-        }
-
-        return bestResult;
-    }
-
-    private List<Node> expand(Node n) {
-        List<Node> list = new ArrayList<>();
-
-        int x = n.x, y = n.y;
-
-        // RIGHT
-        if (y + 1 < cols && traffic[x][y][0] != 0) {
-            int c = traffic[x][y][0];
-            list.add(new Node(x, y + 1, n.path + "R,", n.cost + c));
-        }
-
-        // LEFT
-        if (y - 1 >= 0 && traffic[x][y - 1][0] != 0) {
-            int c = traffic[x][y - 1][0];
-            list.add(new Node(x, y - 1, n.path + "L,", n.cost + c));
-        }
-
-        // DOWN
-        if (x + 1 < rows && traffic[x][y][1] != 0) {
-            int c = traffic[x][y][1];
-            list.add(new Node(x + 1, y, n.path + "D,", n.cost + c));
-        }
-
-        // UP
-        if (x - 1 >= 0 && traffic[x - 1][y][1] != 0) {
-            int c = traffic[x - 1][y][1];
-            list.add(new Node(x - 1, y, n.path + "U,", n.cost + c));
-        }
-
-        // TUNNELS
-        for (int i = 0; i < numTunnels; i++) {
-            int ax = tunnels[i * 2][0];
-            int ay = tunnels[i * 2][1];
-            int bx = tunnels[i * 2 + 1][0];
-            int by = tunnels[i * 2 + 1][1];
-
-            if (x == ax && y == ay) {
-                int manhattan = Math.abs(ax - bx) + Math.abs(ay - by);
-                list.add(new Node(bx, by, n.path + "T" + i + ",", n.cost + manhattan));
-            } else if (x == bx && y == by) {
-                int manhattan = Math.abs(ax - bx) + Math.abs(ay - by);
-                list.add(new Node(ax, ay, n.path + "T" + i + ",", n.cost + manhattan));
-            }
-        }
-
-        return list;
+        return "FAIL;0;" + nodesExpanded;
     }
 }

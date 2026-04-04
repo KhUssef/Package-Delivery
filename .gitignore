@@ -1,6 +1,9 @@
-'ai proj'\aiproj\target\classes\ai\proj\*
+'ai proj'/aiproj/target/classes/ai/proj/*
 *.class
 
 # Maven
 target/
 maven-status/
+*.xml
+pom.xml 
+/.vscode/launch.json
